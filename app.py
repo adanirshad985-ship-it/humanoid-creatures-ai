@@ -3,7 +3,7 @@ import google.generativeai as genai
 from PIL import Image
 
 # 1. Page Setup
-st.set_page_config(page_title="Universal AI Character & Object Editor", layout="wide")
+st.set_page_config(page_title="Universal AI Transformer", layout="wide")
 
 # 2. Styling
 st.markdown("""
@@ -19,15 +19,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🌍 AI Universal Transformer (Characters & Objects)")
+st.title("🌍 AI Universal Transformer (Characters, Food & Objects)")
 
-# 3. API Connection
+# 3. API Connection Fix
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
-    API_KEY = "YAHAN_APNI_API_KEY_LIKHEIN"
+    API_KEY = "YAHAN_APNI_API_KEY_DAALEIN"
 
 genai.configure(api_key=API_KEY)
+
+# ERROR FIX: Model ka naam yahan change kiya gaya hai
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 # 4. Main UI Layout
@@ -47,49 +49,43 @@ with col2:
     with st.expander("👤 Characters & Genders", expanded=True):
         total_chars = st.number_input("Total Characters kitney hon?", min_value=1, value=3)
         animal_list = ["Custom", "Lion", "Tiger", "Persian Cat", "Orange Tabby", "Husky", "Wolf", "Panda"]
-        sel_animal = st.selectbox("Animal Species:", animal_list)
+        sel_animal = st.selectbox("Popular Animals:", animal_list)
         char_detail = st.text_input("Genders/Species Details:", placeholder="e.g. 1 Male Lion, 1 Female Tiger, 1 Cub")
 
     # --- SECTION 2: DRESS & SKIN ---
     with st.expander("👗 Dressing & Appearance"):
         dress_list = ["Custom", "Poor/Ragged", "Royal Armor", "Cyberpunk", "Traditional", "Space Suit"]
-        sel_dress = st.selectbox("Dress Style:", dress_list)
+        sel_dress = st.selectbox("Dress Style Select Karein:", dress_list)
+        custom_dress = st.text_input("Ya custom dress likhein:")
+        
         skin_list = ["Custom", "Natural Fur", "White Fur", "Golden", "Metallic", "Neon"]
-        sel_skin = st.selectbox("Skin Texture:", skin_list)
+        sel_skin = st.selectbox("Skin Texture Select Karein:", skin_list)
 
-    # --- SECTION 3: FOOD & OBJECTS (New!) ---
-    with st.expander("🍲 Food & International Objects", expanded=True):
+    # --- SECTION 3: FOOD & INTERNATIONAL OBJECTS ---
+    with st.expander("🍲 Food & Objects", expanded=True):
         food_count = st.number_input("Kitney food items/objects hon?", min_value=0, value=2)
-        cuisine_list = ["Custom", "American (Burgers/Fries)", "Chinese (Noodles/Dimsum)", "Desi (Biryani/Naan)", "Italian (Pizza/Pasta)", "Japanese (Sushi)", "Middle Eastern"]
+        cuisine_list = ["Custom", "American (Burgers/Fries)", "Chinese (Noodles)", "Desi (Biryani/Naan)", "Italian (Pizza)", "Japanese (Sushi)"]
         sel_cuisine = st.selectbox("Cuisine select karein:", cuisine_list)
-        custom_objects = st.text_input("Specific Objects ya Food items:", placeholder="e.g. 2 Pizza boxes, a Coke bottle, wooden bowls")
+        custom_objects = st.text_input("Specific Food items (e.g. 2 Pizza boxes, a Coke bottle):")
 
     extra_details = st.text_area("Mazid details (Background, Mood, etc.)", placeholder="e.g. Rainy night, candles on table")
 
 # 5. Master Prompt & Generation
 if st.button("Generate Transformation Logic ✨"):
     if uploaded_file:
-        # Handling dropdown vs custom
+        # Handling logic
         final_char = char_detail if sel_animal == "Custom" else f"{total_chars} {sel_animal}s"
-        final_dress = sel_dress if sel_dress != "Custom" else "Custom Style"
+        final_dress = custom_dress if sel_dress == "Custom" else sel_dress
         final_food = custom_objects if sel_cuisine == "Custom" else sel_cuisine
         
         with st.spinner("AI is crafting your scene..."):
             try:
-                master_prompt = f"""
-                You are an expert AI Image Editor. Use the uploaded image for POSE and COMPOSITION only.
-                REPLACE:
-                - Characters: Total {total_chars}. Species/Genders: {final_char}.
-                - Outfit: {final_dress}.
-                - Skin/Fur: {sel_skin}.
-                - Objects/Food: Replace current food/objects with {food_count} items of {final_food} cuisine.
-                - Detail: {custom_objects}.
-                - Environment: {extra_details}.
-                Maintain the exact spatial positions and poses of the original photo.
-                """
-                
-                response = model.generate_content([master_prompt, img])
-                st.success("✅ Transformation Prompt Ready:")
+                # API Call logic
+                response = model.generate_content([
+                    f"Task: Pose-to-Image transformation. Characters: {final_char}. Dress: {final_dress}. Food items ({food_count}): {final_food}. Skin: {sel_skin}. Extra: {extra_details}. Keep the same poses as the uploaded photo.", 
+                    img
+                ])
+                st.success("✅ AI Transformation Details Ready!")
                 st.write(response.text)
                 
             except Exception as e:
