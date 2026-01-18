@@ -2,61 +2,75 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-st.set_page_config(page_title="BioMorph Debugger", layout="wide")
+# 1. UI Styling
+st.set_page_config(page_title="BioMorph Pro", layout="wide")
+st.markdown("""
+<style>
+    .stApp { background-color: #05070a; color: white; }
+    html, body, [data-testid="stWidgetLabel"], .stMarkdown, p, h1, h2, h3, label {
+        color: #ffffff !important;
+    }
+    .stButton>button {
+        width: 100%; background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+        color: white !important; font-weight: bold; padding: 15px; border-radius: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# UI Styling
-st.markdown("<style>html, body, .stMarkdown, p, h1, h2, h3, label {color: white !important;} .stApp {background-color: #0b0f19;}</style>", unsafe_allow_html=True)
+# 2. API Configuration (Direct Key Paste)
+# Maine aapki key yahan dal di hai
+MY_API_KEY = "AIzaSyAYGG0_efV9MBtP_cg11jHkHAYQsWFhciI"
+genai.configure(api_key=MY_API_KEY)
 
-# --- DEBUG SECTION ---
-st.sidebar.header("🔍 System Debugger")
-try:
-    if "GEMINI_API_KEY" in st.secrets:
-        # API Key ke aakhri 4 digits dikhayega confirm karne ke liye
-        key_check = st.secrets["GEMINI_API_KEY"]
-        st.sidebar.success(f"API Key Found (Ends with: ...{key_check[-4:]})")
-        genai.configure(api_key=key_check)
-    else:
-        st.sidebar.error("API Key missing in Secrets!")
-except Exception as e:
-    st.sidebar.error(f"Secret Error: {e}")
+# Hum Gemini 1.5 Pro use kar rahe hain for best results
+model = genai.GenerativeModel('gemini-1.5-pro')
 
-# --- THE FIX: Force Stable API ---
-# Hum yahan check karenge ke model connect ho raha hai ya nahi
-model_name = 'gemini-1.5-flash'
-st.sidebar.info(f"Target Model: {model_name}")
+st.title("🦁 BioMorph: Humanoid Character Transformer")
 
-try:
-    model = genai.GenerativeModel(model_name)
-    st.sidebar.success("Model Object Created")
-except Exception as e:
-    st.sidebar.error(f"Model Init Error: {e}")
+# 3. Input Section
+col1, col2 = st.columns([1, 1], gap="large")
 
-# --- MAIN UI ---
-st.title("🦁 BioMorph Pro AI")
+with col1:
+    st.subheader("📸 Step 1: Image Upload")
+    uploaded_file = st.file_uploader("Photo select karein", type=["jpg", "png", "jpeg"])
+    if uploaded_file:
+        img = Image.open(uploaded_file)
+        st.image(img, use_container_width=True)
 
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
-gender_input = st.text_input("Genders & Count (e.g. 1 Male Lion)")
+with col2:
+    st.subheader("⚙️ Step 2: Customization")
+    
+    gender_input = st.text_input("Genders & Count:", placeholder="e.g. 1 Male Lion, 2 Female Cats")
+    
+    species_opt = st.selectbox("Animal Species:", ["Cat", "Lion", "Tiger", "Wolf", "Panda", "Fox", "Custom"])
+    final_species = species_opt
+    if species_opt == "Custom":
+        final_species = st.text_input("Enter Species Name:")
 
+    dress_opt = st.selectbox("Dressing Style:", ["Modern Casual", "Royal Armor", "Cyberpunk", "Ragged", "Custom"])
+    final_dress = dress_opt
+    if dress_opt == "Custom":
+        final_dress = st.text_input("Enter Outfit Detail:")
+
+# 4. Action & Output
 if st.button("Generate Transformation ✨"):
     if uploaded_file and gender_input:
-        with st.spinner("Processing..."):
+        with st.spinner("AI is working on your story..."):
             try:
-                img = Image.open(uploaded_file)
-                # Test call to see version
-                st.write("🔄 Sending request to Google...")
+                prompt = (
+                    f"Analyze this image. Replace the human characters with humanoid {final_species}. "
+                    f"Character Breakdown: {gender_input}. Dressing Style: {final_dress}. "
+                    f"STRICTLY KEEP: The exact same poses, the same background, and all objects like food or furniture. "
+                    f"Describe the new transformed scene in detail where humans are now {final_species}."
+                )
                 
-                prompt = f"Transform characters to humanoid animals. Breakdown: {gender_input}. Same pose."
                 response = model.generate_content([prompt, img])
                 
-                st.markdown("### ✅ Success!")
-                st.write(response.text)
+                st.markdown("---")
+                st.subheader("✅ Transformed Story Results:")
+                st.markdown(f"<div style='border: 2px solid #10b981; padding: 20px; border-radius: 10px; background-color: #1e293b;'>{response.text}</div>", unsafe_allow_html=True)
                 
             except Exception as e:
-                # YEH SABSE ZAROORI HAI: Ye batayega ke error v1beta se aa raha hai ya v1 se
-                st.error("❗ API Error Detected")
-                st.code(f"Error Message: {str(e)}")
-                
-                if "v1beta" in str(e):
-                    st.warning("⚠️ Streamlit is still forcing 'v1beta' internally. Please Delete the app from Streamlit Dashboard and Redeploy.")
-                elif "404" in str(e):
-                    st.info("💡 Tip: Try changing model to 'gemini-1.5-flash-latest' in the code.")
+                st.error(f"Error: {e}")
+    else:
+        st.warning("Please upload photo and fill details.")
